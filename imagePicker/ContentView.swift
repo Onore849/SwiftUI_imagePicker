@@ -10,14 +10,19 @@ import SwiftUI
 
 struct ContentView: View {
     
-    @State var imgData = Data(capacity: 0)
+    @State var imgData = Data.init(count: 0)
     @State var shown = false
     
     var body: some View {
         
         VStack {
             
-            Image(uiImage: UIImage(data: imgData)!).resizable().frame(height: 300).padding().cornerRadius(20)
+            if imgData.count != 0 {
+                
+                Image(uiImage: UIImage(data: imgData)!).resizable().frame(height: 300).padding().cornerRadius(20)
+                
+            }
+            
             
             Button(action: {
                 
@@ -27,15 +32,11 @@ struct ContentView: View {
                 
                 Text("Select Image")
                 
-            }.sheet(isPresented: $shown, onDismiss: {
+            }.sheet(isPresented: $shown) {
                 
-                self.shown.toggle()
+                picker(shown: self.$shown, imgData: self.$imgData)
                 
-            }) {
-                
-                picker()
-                
-            }
+            }.animation(.spring())
         }
     }
 }
@@ -48,10 +49,21 @@ struct ContentView_Previews: PreviewProvider {
 
 struct picker: UIViewControllerRepresentable {
     
+    @Binding var shown: Bool
+    @Binding var imgData: Data
+    
+    func makeCoordinator() -> Coordinator {
+        
+        
+        return Coordinator(imgData1: $imgData, shown1: $shown)
+    }
+    
+    
     func makeUIViewController(context: UIViewControllerRepresentableContext<picker>) -> UIImagePickerController {
         
         let controller = UIImagePickerController()
         controller.sourceType = .photoLibrary
+        controller.delegate = context.coordinator
         
         return controller
     }
@@ -59,5 +71,34 @@ struct picker: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: UIViewControllerRepresentableContext<picker>) {
         
         
+        
+    }
+    
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        
+        @Binding var imgData: Data
+        @Binding var shown: Bool
+        
+        init(imgData1: Binding<Data>, shown1 : Binding<Bool>) {
+            
+            _imgData = imgData1
+            _shown = shown1
+            
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            
+            shown.toggle()
+            
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            
+            let image = info[.originalImage] as! UIImage
+            imgData = image.jpegData(compressionQuality: 80)!
+            
+            shown.toggle()
+            
+        }
     }
 }
